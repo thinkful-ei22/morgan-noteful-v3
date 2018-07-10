@@ -10,7 +10,7 @@ const Note = require('../models/notes');
 //find (optionally by search term)
 // mongoose.connect(MONGODB_URI)
 //   .then( () => {
-//     const searchTerm = 'cat';
+//     const searchTerm = '';
 //     let filter = {};
 
 //     if(searchTerm) {
