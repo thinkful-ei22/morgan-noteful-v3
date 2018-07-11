@@ -13,6 +13,7 @@ noteSchema.set('toObject', {
   virtuals: true,     // include built-in virtual `id`
   versionKey: false,  // remove `__v` version key
   transform: (doc, ret) => {
+    ret.id = ret._id;
     delete ret._id; // delete `_id`
   }
 });

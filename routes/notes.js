@@ -2,6 +2,7 @@
 
 const express = require('express');
 const Note = require('../models/notes');
+const mongoose = require('mongoose');
 
 const router = express.Router();
 
@@ -36,15 +37,24 @@ router.get('/', (req, res, next) => {
 router.get('/:id', (req, res, next) => {
   const id = req.params.id;
 
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    const err = new Error('The `id` is not valid');
+    err.status = 400;
+    return next(err);
+  }
+
   return Note.findById(id)
     .then( result => {
       if(result) {
         res.json(result);
-      } else{
+      } else {
         next();
       }
     })
-    .catch(err => next(err));
+    .catch(err => {
+      console.error(err.message);
+      next(err);
+    });
 });
 
 
@@ -85,6 +95,12 @@ router.post('/', (req, res, next) => {
 router.put('/:id', (req, res, next) => {
   const id = req.params.id;
 
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    const err = new Error('The `id` is not valid');
+    err.status = 400;
+    return next(err);
+  }
+
   let updateInfo = {};
 
   const possibleUpdates = ['title', 'content'];
@@ -117,6 +133,12 @@ router.put('/:id', (req, res, next) => {
 /* ========== DELETE/REMOVE A SINGLE ITEM ========== */
 router.delete('/:id', (req, res, next) => {
   const id = req.params.id;
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    const err = new Error('The `id` is not valid');
+    err.status = 400;
+    return next(err);
+  }
 
   Note.findByIdAndRemove(id)
     .then(result => {
