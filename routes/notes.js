@@ -70,7 +70,7 @@ router.post('/', (req, res, next) => {
 
   return Note.create(newItem)
     .then(response => {
-      res.location(`${req.originalUrl}${response.id}`).status(201).json(response)
+      res.location(`${req.originalUrl}${response.id}`).status(201).json(response);
     })
     .catch(err => next(err));
 });

@@ -17,6 +17,6 @@ noteSchema.set('toObject', {
   }
 });
 
-noteSchema.set('timestamps', true);
+noteSchema.set('timestamps', true); //mongoose built-in Date functionality
 
-module.exports = mongoose.model('Note', noteSchema);
+module.exports = mongoose.model('Note', noteSchema); //automatically creates "notes" collection
