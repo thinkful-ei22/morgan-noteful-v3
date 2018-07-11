@@ -68,7 +68,7 @@ router.post('/', (req, res, next) => {
   
   if(!req.body.title) {
     const err = new Error('Must include `title` in request body');
-    err.status = 404;
+    err.status = 400;
     return next(err);
   }
   
