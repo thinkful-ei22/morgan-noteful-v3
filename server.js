@@ -29,7 +29,6 @@ app.use('/api/notes', notesRouter);
 app.use((req, res, next) => {
   const err = new Error('Not Found');
   err.status = 404;
-  console.log('LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL'+ err);
   next(err);
 });
 
