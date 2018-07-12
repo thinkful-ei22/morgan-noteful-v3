@@ -16,7 +16,7 @@ chai.use(chaiHttp);
 describe('Testing /api/notes endpoints', function() {
 
   before( function() {
-    return mongoose.connect(TEST_MONGO_URI)
+    return mongoose.connect(TEST_MONGO_URI, {connectTimeoutMS: 4000})
       .then( () => mongoose.connection.db.dropDatabase());
   });
 
@@ -211,7 +211,29 @@ describe('Testing /api/notes endpoints', function() {
 
   describe('DELETE request handlers', function(){
     it('should delete a note when provided valid :id in request parameters', function(){
+      let preCount;
+      let grabbedItem;
 
+      return  Note.count()
+        .then( count => {
+          preCount = count;
+          return Note.findOne();
+        })
+        .then(dbItem => {
+          grabbedItem = dbItem;
+          return chai.request(app).del('/api/notes/' + dbItem.id);
+        })
+        .then(response => {
+          expect(response).to.have.status(204);
+          return Note.count();
+        })
+        .then(count => {
+          expect(count).to.equal(preCount - 1);
+          return Note.findById(grabbedItem.id);
+        })
+        .then(response => {
+          expect(response).to.equal(null);
+        });
     });
   });
 });
