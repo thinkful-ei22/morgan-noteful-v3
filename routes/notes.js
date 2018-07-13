@@ -106,17 +106,25 @@ router.post('/', (req, res, next) => {
 
 /* ========== PUT/UPDATE A SINGLE ITEM ========== */
 router.put('/:id', (req, res, next) => {
-  const id = req.params.id;
+  const noteId = req.params.id;
 
-  if (!mongoose.Types.ObjectId.isValid(id)) {
+  if (!mongoose.Types.ObjectId.isValid(noteId)) {
     const err = new Error('The `id` is not valid');
     err.status = 400;
     return next(err);
   }
 
+  if (req.body.folderId){
+    if (!mongoose.Types.ObjectId.isValid(req.body.folderId)) {
+      const err = new Error('The `folderId` is not valid');
+      err.status = 400;
+      return next(err);
+    }
+  }
+
   let updateInfo = {};
 
-  const possibleUpdates = ['title', 'content'];
+  const possibleUpdates = ['title', 'content', 'folderId'];
   possibleUpdates.forEach( field => {
     if(field in req.body) {
       updateInfo[field] = req.body[field];
@@ -128,8 +136,8 @@ router.put('/:id', (req, res, next) => {
     err.status = 400;
     return next(err);
   }
-
-  return Note.findByIdAndUpdate(id,
+  // Sends error 500 if folderId is an empty string. Look into this later
+  return Note.findByIdAndUpdate(noteId,
     {$set: updateInfo}, 
     {multi: false, upsert: false, new: true})
     .then( result => {
