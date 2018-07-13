@@ -38,12 +38,13 @@
   {
     "_id": "000000000000000000000006",
     "title": "9 reasons you can blame the recession on cats",
-    "content": "Seventh Seeded Note",
+    "content": null,
     "folderId": "111111111111111111111103"
   },
   {
     "_id": "000000000000000000000007",
     "title": "10 ways marketers are making you addicted to cats",
-    "content": "Eighth Seeded Note"
+    "content": "Eighth Seeded Note",
+    "folderId": null
   }
 ]

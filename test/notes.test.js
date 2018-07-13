@@ -7,7 +7,9 @@ const mongoose = require('mongoose');
 const app = require('../server');
 const { TEST_MONGO_URI } = require('../config');
 const Note = require('../models/notes');
-const seedData = require('../db/seed/notes');
+const Folder = require('../models/folders');
+const seedNoteData = require('../db/seed/notes');
+const seedFolderData = require('../db/seed/folders');
 
 const expect = chai.expect;
 chai.use(chaiHttp);
@@ -17,12 +19,17 @@ describe('Testing /api/notes endpoints', function() {
 
   before( function() {
     return mongoose.connect(TEST_MONGO_URI, {connectTimeoutMS: 4000})
-      .then( () => mongoose.connection.db.dropDatabase());
+      .then( function() {
+        mongoose.connection.db.dropDatabase();
+      });
   });
 
   beforeEach( function() {
     this.timeout(6000);
-    return Note.insertMany(seedData);
+    return Promise.all([ 
+      Note.insertMany(seedNoteData),
+      Folder.insertMany(seedFolderData)
+    ]);
   });
 
   afterEach( function() {
@@ -48,7 +55,7 @@ describe('Testing /api/notes endpoints', function() {
           expect(response).to.be.json;
           expect(response).to.have.status(200);
           response.body.forEach( note => {
-            expect(note).to.have.keys(['id', 'title', 'content', 'createdAt', 'updatedAt']);
+            expect(note).to.include.keys(['id', 'title', 'content', 'createdAt', 'updatedAt', 'folderId']);
             expect(note).to.be.a('object');
           });
           return Note.find();
@@ -60,8 +67,7 @@ describe('Testing /api/notes endpoints', function() {
 
     it('should return a single object when GET request to api/notes/:id', function(){
       let grabbedItem;
-      return chai.request(app)
-        .get('/api/notes')
+      return chai.request(app).get('/api/notes')
         .then(result => {
           grabbedItem = result.body[0];
           return chai.request(app).get(`/api/notes/${grabbedItem.id}`);       
@@ -69,13 +75,14 @@ describe('Testing /api/notes endpoints', function() {
         .then(response => {
           expect(response).to.have.status(200);
           expect(response.body).to.be.a('object');
-          expect(response.body).to.have.keys(['id', 'title', 'content', 'createdAt', 'updatedAt']);
+          expect(response.body).to.include.keys(['id', 'title', 'content', 'createdAt', 'updatedAt', 'folderId']);
           expect(response).to.be.json;
           expect(response.body.id).to.equal(grabbedItem.id);
           expect(response.body.title).to.equal(grabbedItem.title);
           expect(response.body.content).to.equal(grabbedItem.content);
           expect(response.body.createdAt).to.eql(grabbedItem.createdAt);
           expect(response.body.updatedAt).to.eql(grabbedItem.updatedAt);
+          expect(response.body.folderId).to.equal(grabbedItem.folderId);
           return Note.findById(grabbedItem.id);
         })
         .then( dbResponse => {
@@ -84,10 +91,11 @@ describe('Testing /api/notes endpoints', function() {
           expect(dbResponse.content).to.equal(grabbedItem.content);
           expect(dbResponse.createdAt).to.eql(new Date (grabbedItem.createdAt));
           expect(dbResponse.updatedAt).to.eql(new Date (grabbedItem.updatedAt));
+          expect(dbResponse.folderId.toString()).to.equal(grabbedItem.folderId); //Database folderId comes back as Object
         });
     });
 
-    it('should return correct error if :id is not found in database', function(){
+    it('should return correct error if :id is not valid', function(){
       return chai.request(app)
         .get('/api/notes/PROBABLY-NOT-A-REAL-ID-OF-A-NOTE')
         .then(res => {
@@ -104,7 +112,8 @@ describe('Testing /api/notes endpoints', function() {
     it('should return a new object with Mongoose generated ID', function(){
       const dummyNote = {
         title: 'Dummiest of Notes',
-        content: 'Dum and Dummer is the best movie ever'
+        content: 'Dum and Dummer is the best movie ever',
+        folderId: '111111111111111111111101'
       };
 
       let apiResponse;
@@ -117,12 +126,14 @@ describe('Testing /api/notes endpoints', function() {
           expect(response.body).to.be.a('object');
           expect(response.body.title).to.equal(dummyNote.title);
           expect(response.body.content).to.equal(dummyNote.content);
-          expect(response.body).to.have.keys('id', 'title', 'content', 'createdAt', 'updatedAt');
+          expect(response.body.folderId).to.equal(dummyNote.folderId);
+          expect(response.body).to.include.keys(['id', 'title', 'content', 'createdAt', 'updatedAt', 'folderId']);
           return Note.findById(response.body.id);
         })
         .then( dbResponse => {
           expect(dbResponse.title).to.equal(dummyNote.title);
           expect(dbResponse.content).to.equal(dummyNote.content);
+          expect(dbResponse.folderId.toString()).to.equal(dummyNote.folderId);
           expect(dbResponse.id).to.equal(apiResponse.id);
           expect(dbResponse.createdAt).to.eql(new Date(apiResponse.createdAt));
           expect(dbResponse.updatedAt).to.deep.equal(new Date(apiResponse.updatedAt));
@@ -149,7 +160,8 @@ describe('Testing /api/notes endpoints', function() {
     it('should update title and content when passed in requeset body', function() {
       const dummyUpdate = {
         title: 'Mmmmmmmmmmm...mocha....',
-        content: 'Mmmmmmmm...chai tea.....'
+        content: 'Mmmmmmmm...chai tea.....',
+        folderId: '111111111111111111111102'
       };
       let apiResponse;
       let grabbedItem;
@@ -163,23 +175,26 @@ describe('Testing /api/notes endpoints', function() {
           expect(response).to.be.json;
           expect(response).to.have.status(200);
           expect(response.body).to.be.a('object');
-          expect(response.body).to.include.keys(['id', 'title', 'content', 'createdAt', 'updatedAt']);
+          expect(response.body).to.include.keys(['id', 'title', 'content', 'createdAt', 'updatedAt', 'folderId']);
           expect(response.body.title).to.equal(dummyUpdate.title);
           expect(response.body.content).to.equal(dummyUpdate.content);
+          expect(response.body.folderId).to.equal(dummyUpdate.folderId);
           return Note.findById(response.body.id);
         })
         .then(dbItem => {
           expect(dbItem.title).to.equal(dummyUpdate.title);
           expect(dbItem.content).to.equal(dummyUpdate.content);
+          expect(dbItem.folderId.toString()).to.equal(dummyUpdate.folderId);
           expect(apiResponse.title).to.equal(dbItem.title);
           expect(apiResponse.content).to.equal(dbItem.content);
+          expect(apiResponse.folderId).to.equal(dbItem.folderId.toString());
           expect(apiResponse.id).to.equal(dbItem.id);
           expect(new Date(apiResponse.createdAt)).to.deep.equal(new Date(dbItem.createdAt));
           expect(new Date(apiResponse.updatedAt)).to.deep.equal(new Date(dbItem.updatedAt));
         });
     });
 
-    it('should return correct error if :id is not found in database', function(){
+    it('should return correct error if :id is not valid', function(){
       return chai.request(app)
         .put('/api/notes/PROBABLY-NOT-A-REAL-ID-OF-A-NOTE')
         .send({title: 'fake title', content:'fake content'})

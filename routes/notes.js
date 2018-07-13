@@ -25,6 +25,14 @@ router.get('/', (req, res, next) => {
 
   return Note.find(filter).sort({updatedAt: 'desc'})
     .then(results => {
+      results.forEach( note => {
+        if(!note.folderId) {
+          note.folderId = null;
+        }
+        if(!note.content){
+          note.content = null;
+        }
+      });
       res.json(results);
     })
     .catch(err => {
@@ -75,6 +83,10 @@ router.post('/', (req, res, next) => {
     const err = new Error('Must include `title` in request body');
     err.status = 400;
     return next(err);
+  }
+
+  if(!req.body.folderId){
+    newItem.folderId = null;
   }
 
   if(req.body.folderId){
