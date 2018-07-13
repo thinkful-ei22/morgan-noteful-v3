@@ -273,7 +273,44 @@ describe('Testing /api/folders endpoints', function(){
 
   describe('DELETE requests to endpoint /api/folders/:id', function(){
     it('should delete a folder when valid ID is sent as request parameter', function(){
+      this.timeout(6000);
 
+      let preCount;
+      let grabbedItem;
+      return Promise.all([
+        Folder.findOne(),
+        Folder.count()
+      ])
+        .then( function([folderItem, count]) {
+          grabbedItem = folderItem;
+          preCount = count;
+          return chai.request(app).del('/api/folders/' + folderItem.id);
+        })
+        .then( function(apiResponse){
+          expect(apiResponse).to.have.status(204);
+          return Folder.count();
+        })
+        .then( function(count){
+          expect(count).to.equal(preCount - 1);
+        });
+    });
+
+    it('should return 400 if ID is not valid mongo ID format', function(){
+      return chai.request(app).del('/api/folders/badId')
+        .then( function(apiResonse){
+          expect(apiResonse).to.have.status(400);
+          expect(apiResonse.body.message).to.equal('ID is not a valid format');
+        });
+    });
+
+    it('should return 404 if ID is valid but not found', function(){
+      return chai.request(app).del('/api/folders/0000000000000000000000ee')
+      /* if this test ever fails, double-check seed data to make sure this ID is
+      not actually in the data */
+
+        .then( function(apiResponse){
+          expect(apiResponse).to.have.status(404);
+        });
     });
   });
 
