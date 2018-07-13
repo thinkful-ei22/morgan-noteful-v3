@@ -25,14 +25,6 @@ router.get('/', (req, res, next) => {
 
   return Note.find(filter).sort({updatedAt: 'desc'})
     .then(results => {
-      results.forEach( note => {
-        if(!note.folderId) {
-          note.folderId = null;
-        }
-        if(!note.content){
-          note.content = null;
-        }
-      });
       res.json(results);
     })
     .catch(err => {
@@ -87,6 +79,10 @@ router.post('/', (req, res, next) => {
 
   if(!req.body.folderId){
     newItem.folderId = null;
+  }
+
+  if(!req.body.content){
+    newItem.content = null;
   }
 
   if(req.body.folderId){
