@@ -76,8 +76,16 @@ router.post('/', (req, res, next) => {
     err.status = 400;
     return next(err);
   }
+
+  if(req.body.folderId){
+    if (!mongoose.Types.ObjectId.isValid(req.body.folderId)) {
+      const err = new Error('The `folderId` is not valid');
+      err.status = 400;
+      return next(err);
+    }
+  }
   
-  ['title', 'content'].forEach( field => {
+  ['title', 'content', 'folderId'].forEach( field => {
     if(field in req.body){
       newItem[field] = req.body[field];
     }
