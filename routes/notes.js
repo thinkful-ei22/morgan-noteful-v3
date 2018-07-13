@@ -11,11 +11,16 @@ const router = express.Router();
 
 /* ========== GET/READ ALL ITEMS ========== */
 router.get('/', (req, res, next) => {
-  const searchTerm = req.query.searchTerm;
-  let filter = {};
+  const { searchTerm, folderId } = req.query;
+
+  let filter= {};
 
   if(searchTerm) {
     filter.title = {$regex: searchTerm};
+  }
+
+  if(folderId){
+    filter.folderId = folderId;
   }
 
   return Note.find(filter).sort({updatedAt: 'desc'})
