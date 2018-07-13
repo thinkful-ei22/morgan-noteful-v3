@@ -64,7 +64,7 @@ router.post('/', (req, res, next) => {
         err = new Error('The folder name already exists');
         err.status = 400;
       }
-      next(err);
+      return next(err);
     });
 });
 
@@ -88,16 +88,24 @@ router.put('/:id', (req, res, next) => {
     next(err);
   }
 
+  //needs to add a validation up here to validate that ID exists in the database
+
   return Folder.findByIdAndUpdate(id, {$set: {'name': newName}}, {new: true})
     .then(updatedFolder => {
+      if(!updatedFolder){
+        return Promise.reject();
+      }
       res.json(updatedFolder);
     })
-    .catch(err => {
+    .catch(function(err) {
+      if(!err){
+        return next(err);
+      }
       if(err.code === 11000) {
         err = new Error('The folder name already exists');
         err.status = 400;
-        next(err);
       }
+      return next(err);
     });
 });
 
