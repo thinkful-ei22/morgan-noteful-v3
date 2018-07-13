@@ -11,7 +11,7 @@ const router = express.Router();
 
 /* ========== GET/READ ALL ITEMS ========== */
 router.get('/', (req, res, next) => {
-  const { searchTerm, folderId } = req.query;
+  const { searchTerm, folderId, tagId } = req.query;
 
   let filter= {};
 
@@ -23,7 +23,11 @@ router.get('/', (req, res, next) => {
     filter.folderId = folderId;
   }
 
-  return Note.find(filter).sort({updatedAt: 'desc'})
+  if(tagId){
+    filter.tags = tagId;
+  }
+
+  return Note.find(filter).populate('tags').sort({updatedAt: 'desc'})
     .then(results => {
       res.json(results);
     })
@@ -48,7 +52,7 @@ router.get('/:id', (req, res, next) => {
     return next(err);
   }
 
-  return Note.findById(id)
+  return Note.findById(id).populate('tags')
     .then( result => {
       if(result) {
         res.json(result);
@@ -70,34 +74,44 @@ router.get('/:id', (req, res, next) => {
 /* ========== POST/CREATE AN ITEM ========== */
 router.post('/', (req, res, next) => {
   let newItem = {};
-  
-  if(!req.body.title) {
+
+  //grabs info from request body, stores in newItem
+  ['title', 'content', 'folderId', 'tags'].forEach( field => {
+    newItem[field] = req.body[field];
+  });
+
+  //validates folderId (if it has one)
+  if(newItem.folderId && !mongoose.Types.ObjectId.isValid(newItem.folderId)) {
+    const err = new Error('The `folderId` is not valid');
+    err.status = 400;
+    return next(err);
+  }
+
+  //validates that there is a title
+  if(!newItem.title) {
     const err = new Error('Must include `title` in request body');
     err.status = 400;
     return next(err);
   }
 
-  if(!req.body.folderId){
-    newItem.folderId = null;
-  }
-
-  if(!req.body.content){
-    newItem.content = null;
-  }
-
-  if(newItem.folderId){
-    if (!mongoose.Types.ObjectId.isValid(newItem.folderId)) {
-      const err = new Error('The `folderId` is not valid');
+  //If there are tagID's in the tags array, validates that each one is valid
+  if(newItem.tags.length !== 0) {
+    if(newItem.tags.find( tagId => {
+      return !mongoose.Types.ObjectId.isValid(tagId);
+    })){
+      const err = new Error('The `tagId`s are not all valid');
       err.status = 400;
       return next(err);
     }
   }
-  
-  ['title', 'content', 'folderId'].forEach( field => {
-    if(field in req.body){
-      newItem[field] = req.body[field];
-    }
-  });
+
+  if(!newItem.folderId){
+    newItem.folderId = null;
+  }
+
+  if(!newItem.content){
+    newItem.content = null;
+  }
 
   return Note.create(newItem)
     .then(response => {
