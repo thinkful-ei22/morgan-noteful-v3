@@ -85,8 +85,8 @@ router.post('/', (req, res, next) => {
     newItem.content = null;
   }
 
-  if(req.body.folderId){
-    if (!mongoose.Types.ObjectId.isValid(req.body.folderId)) {
+  if(newItem.folderId){
+    if (!mongoose.Types.ObjectId.isValid(newItem.folderId)) {
       const err = new Error('The `folderId` is not valid');
       err.status = 400;
       return next(err);
