@@ -95,7 +95,7 @@ router.post('/', (req, res, next) => {
   }
 
   //If there are tagID's in the tags array, validates that each one is valid
-  if(newItem.tags.length !== 0) {
+  if(newItem.tags.length > 0) {
     if(newItem.tags.find( tagId => {
       return !mongoose.Types.ObjectId.isValid(tagId);
     })){
@@ -146,24 +146,42 @@ router.put('/:id', (req, res, next) => {
 
   let updateInfo = {};
 
-  const possibleUpdates = ['title', 'content', 'folderId'];
+  const possibleUpdates = ['title', 'content', 'folderId', 'tags'];
   possibleUpdates.forEach( field => {
     if(field in req.body) {
       updateInfo[field] = req.body[field];
     }
   });
   
+  //If there are tagID's in the tags array, validates that each one is correct format
+  if(updateInfo.tags.length > 0) {
+    if(updateInfo.tags.find( tagId => {
+      return !mongoose.Types.ObjectId.isValid(tagId);
+    })){
+      const err = new Error('The `tagId`s are not all valid');
+      err.status = 400;
+      return next(err);
+    }
+  }
+
+  //validates title (required)
   if(updateInfo.title === '') {
     const err = new Error('Must provide `title` in request body');
     err.status = 400;
     return next(err);
   }
+
   // Sends error 500 if folderId is an empty string. Look into this later
   return Note.findByIdAndUpdate(noteId,
     {$set: updateInfo}, 
-    {multi: false, upsert: false, new: true})
+    {new: true})
     .then( result => {
-      res.json(result);
+      if(result) {
+        return res.json(result);
+      }
+      else {
+        return next();
+      }
     })
     .catch(err => next(err));
 });
