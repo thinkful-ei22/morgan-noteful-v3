@@ -212,6 +212,100 @@ describe('TAGS /api/tags endpoints', function(){
           expect(dbResponse.updatedAt).to.not.eql(grabbedItem.updatedAt);
         });
     });
+
+    it('should return 400 when non-valid ID is provided', function(){
+      const update = {'name': 'UPdAtEd NaMe'};
+
+      return chai.request(app).put('/api/tags/BAD-ID').send(update)
+        .then(function(response){
+          expect(response).to.have.status(400);
+          expect(response.body.message).to.equal('Must provide valid mongo ID');
+        });
+    });
+
+    it('should return 400 when name is not provided', function(){
+      const emptyName = {'name': ''};
+      const nullName = {'name': null};
+
+      let grabbedItem;
+      return Tag.findOne()
+        .then(function(tag){
+          grabbedItem = tag;
+          return chai.request(app).put('/api/tags/' + grabbedItem.id).send(emptyName);
+        })
+        .then(function(response){
+          expect(response).to.have.status(400);
+          expect(response.body.message).to.equal('Tag must have a `name`');
+          return chai.request(app).put('/api/tags/' + grabbedItem.id).send(nullName);
+        })
+        .then(function(response){
+          expect(response).to.have.status(400);
+          expect(response.body.message).to.equal('Tag must have a `name`');
+        });
+    });
+
+    it('should return 404 when ID is not valid, but not found', function(){
+      const update = {'name': 'UPdAtEd NaMe'};
+
+      return chai.request(app).put('/api/tags/0000000000000000000000ff').send(update)
+        .then(function(response){
+          expect(response).to.have.status(404);
+          expect(response.body.message).to.equal('Not Found');
+        });
+    });
+
+    it('should return appropriate message if Tag name is not unique', function(){
+      return Tag.find().limit(2)
+        .then(function([tag1, tag2]){
+          return chai.request(app).put('/api/tags/' + tag1.id).send({'name': tag2.name});
+        })
+        .then(function(response){
+          expect(response).to.have.status(400);
+          expect(response.body.message).to.equal('The tag name already exists');
+        });
+    });
+
+  });
+
+
+
+  describe('DELETE by :ID to /api/tags', function(){
+    it('should delete a Tag and pull Tag from Notes when valid ID is provided', function(){
+      let grabbedItem;
+
+      return Tag.findOne()
+        .then(function(tag){
+          grabbedItem = tag;
+          return chai.request(app).delete('/api/tags/' + grabbedItem.id);
+        })
+        .then(function(apiResponse){
+          expect(apiResponse).to.have.status(204);
+          return Tag.findById(grabbedItem.id);
+        })
+        .then(function(dbResponse){
+          expect(dbResponse).to.be.null;
+          return Note.find({tags: grabbedItem.id});
+        }).then(function(noteDbResponse){
+          expect(noteDbResponse.length).to.equal(0);
+        });
+    });
+
+    it('should return 400 when non-valid ID is provided', function(){
+      return chai.request(app).delete('/api/tags/BAD-ID')
+        .then(function(response){
+          expect(response).to.have.status(400);
+          expect(response.body.message).to.equal('Must provide valid mongo ID');
+        });
+    });
+
+    it('should return 404 when ID is not valid, but not found', function(){
+      return chai.request(app).delete('/api/tags/0000000000000000000000ff')  //if this test fails, double-check that this is not an actual ID in the database
+        .then(function(response){
+          expect(response).to.have.status(404);
+          expect(response.body.message).to.equal('Not Found');
+        });
+    });
+
   });
 
 });

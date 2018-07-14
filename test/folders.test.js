@@ -5,8 +5,10 @@ const chaiHttp = require('chai-http');
 const mongoose = require('mongoose');
 
 const Folder = require('../models/folders');
+const Note = require('../models/notes');
 const app = require('../server');
 const seedFolders = require('../db/seed/folders.json');
+const seedNotes = require('../db/seed/notes.json');
 const { TEST_MONGO_URI } = require('../config');
 
 const expect = chai.expect;
@@ -28,9 +30,12 @@ describe('Testing /api/folders endpoints', function(){
   beforeEach(  function() {
     this.timeout(8000);
     return Promise.all([
-      Folder.insertMany(seedFolders),
-      Folder.createIndexes()
-    ]);
+      Note.insertMany(seedNotes),
+      Folder.insertMany(seedFolders)
+    ])
+      .then(function(){
+        return Folder.createIndexes();
+      });
   });
 
   afterEach( function() {
@@ -56,7 +61,7 @@ describe('Testing /api/folders endpoints', function(){
           expect(apiResult).to.have.status(200);
           expect(apiResult.body).to.have.lengthOf.at.least(1);
           apiResult.body.forEach(folder => {
-            expect(folder).to.include.keys(['name', 'createdAt', 'updatedAt']);
+            expect(folder).to.include.keys(['name', 'createdAt', 'updatedAt', 'id']);
           });
           return Folder.count();
         })
@@ -272,7 +277,7 @@ describe('Testing /api/folders endpoints', function(){
 
 
   describe('DELETE requests to endpoint /api/folders/:id', function(){
-    it('should delete a folder when valid ID is sent as request parameter', function(){
+    it('should delete a folder and all contained Notes when valid ID is sent as request parameter', function(){
       this.timeout(6000);
 
       let preCount;
@@ -284,7 +289,7 @@ describe('Testing /api/folders endpoints', function(){
         .then( function([folderItem, count]) {
           grabbedItem = folderItem;
           preCount = count;
-          return chai.request(app).del('/api/folders/' + folderItem.id);
+          return chai.request(app).del('/api/folders/' + grabbedItem.id);
         })
         .then( function(apiResponse){
           expect(apiResponse).to.have.status(204);
@@ -292,6 +297,10 @@ describe('Testing /api/folders endpoints', function(){
         })
         .then( function(count){
           expect(count).to.equal(preCount - 1);
+          return Note.find({folderId: grabbedItem.id});
+        })
+        .then(function(noteDbResponse){
+          expect(noteDbResponse.length).to.equal(0);
         });
     });
 
