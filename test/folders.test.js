@@ -20,7 +20,7 @@ describe('Testing /api/folders endpoints', function(){
     this.timeout(6000);
     return mongoose.connect(TEST_MONGO_URI, {connectTimeoutMS: 6000})
       .then( function(){ 
-        mongoose.connection.db.dropDatabase();
+        return mongoose.connection.db.dropDatabase();
       });
     ///.catch(err => console.log(err));
   });

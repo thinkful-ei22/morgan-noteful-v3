@@ -8,8 +8,10 @@ const app = require('../server');
 const { TEST_MONGO_URI } = require('../config');
 const Note = require('../models/notes');
 const Folder = require('../models/folders');
+const Tag = require('../models/tags');
 const seedNoteData = require('../db/seed/notes');
 const seedFolderData = require('../db/seed/folders');
+const seedTagData = require('../db/seed/tags');
 
 const expect = chai.expect;
 chai.use(chaiHttp);
@@ -20,19 +22,27 @@ describe('Testing /api/notes endpoints', function() {
   before( function() {
     return mongoose.connect(TEST_MONGO_URI, {connectTimeoutMS: 4000})
       .then( function() {
-        mongoose.connection.db.dropDatabase();
+        return mongoose.connection.db.dropDatabase();
       });
   });
 
   beforeEach( function() {
-    this.timeout(6000);
-    return Promise.all([ 
+    this.timeout(8000);
+    return Promise.all([
       Note.insertMany(seedNoteData),
-      Folder.insertMany(seedFolderData)
-    ]);
+      Folder.insertMany(seedFolderData),
+      Tag.insertMany(seedTagData)
+    ])
+      .then( function(){
+        return Folder.createIndexes();
+      })
+      .then( function(){
+      //  return Tag.createIndexes();
+      });
   });
 
   afterEach( function() {
+    this.timeout(5000);
     return mongoose.connection.db.dropDatabase();
   });
 
@@ -66,6 +76,8 @@ describe('Testing /api/notes endpoints', function() {
     });
 
     it('should return a single object when GET request to api/notes/:id', function(){
+      this.timeout(6000);
+
       let grabbedItem;
       return chai.request(app).get('/api/notes')
         .then(result => {
@@ -113,7 +125,8 @@ describe('Testing /api/notes endpoints', function() {
       const dummyNote = {
         title: 'Dummiest of Notes',
         content: 'Dum and Dummer is the best movie ever',
-        folderId: '111111111111111111111101'
+        folderId: '111111111111111111111101',
+        tags:['222222222222222222222200']
       };
 
       let apiResponse;
@@ -161,7 +174,8 @@ describe('Testing /api/notes endpoints', function() {
       const dummyUpdate = {
         title: 'Mmmmmmmmmmm...mocha....',
         content: 'Mmmmmmmm...chai tea.....',
-        folderId: '111111111111111111111102'
+        folderId: '111111111111111111111102',
+        tags: []
       };
       let apiResponse;
       let grabbedItem;
@@ -206,7 +220,9 @@ describe('Testing /api/notes endpoints', function() {
     it('should return correct error message if title is not provided', function(){
       const updateObj = {
         title: '', 
-        content:'title is empty string'
+        content:'title is empty string',
+        folderId: '000011110000111100001111',
+        tags: []
       };
 
       let testId;

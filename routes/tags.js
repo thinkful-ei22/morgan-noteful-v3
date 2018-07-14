@@ -61,7 +61,7 @@ router.post('/', (req, res, next) => {
         err = new Error('The tag name already exists');
         err.status = 400;
       }
-      next(err);
+      return next(err);
     });
 
 });
